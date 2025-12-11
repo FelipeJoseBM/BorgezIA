@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat RAG</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        #chat-container {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            width: 400px;
+            max-width: 90%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 10px;
+            max-height: 400px;
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            width: fit-content;
+            max-width: 80%;
+        }
+
+        .user {
+            background-color: #d1e7ff;
+            align-self: flex-end;
+        }
+
+        .bot {
+            background-color: #e2e2e2;
+            align-self: flex-start;
+        }
+
+        #input-container {
+            display: flex;
+        }
+
+        #question {
+            flex: 1;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        #send-btn {
+            padding: 10px 15px;
+            margin-left: 5px;
+            border: none;
+            background-color: #4a90e2;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #send-btn:hover {
+            background-color: #357abd;
+        }
+    </style>
+</head>
+<body>
+
+<div id="chat-container">
+    <div id="messages"></div>
+    <div id="input-container">
+        <input type="text" id="question" placeholder="Digite sua pergunta...">
+        <button id="send-btn" onclick="sendQuestion()">Enviar</button>
+    </div>
+</div>
+
+<script>
+    async function sendQuestion() {
+        const questionInput = document.getElementById('question');
+        const sendBtn = document.getElementById('send-btn');
+        const messagesDiv = document.getElementById('messages');
+        const question = questionInput.value.trim();
+        if (!question) return;
+    
+        // Bloqueia input e botão enquanto pensa
+        questionInput.disabled = true;
+        sendBtn.disabled = true;
+    
+        // Adiciona a pergunta do usuário
+        const userMsg = document.createElement('div');
+        userMsg.classList.add('message', 'user');
+        userMsg.textContent = question;
+        messagesDiv.appendChild(userMsg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+        // Mensagem "pensando"
+        const loadingMsg = document.createElement('div');
+        loadingMsg.classList.add('message', 'bot');
+        loadingMsg.textContent = '🤖 Pensando...';
+        messagesDiv.appendChild(loadingMsg);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+        try {
+            const response = await fetch('/rag/ask', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question})
+            });
+            const data = await response.json();
+    
+            // Remove "pensando"
+            messagesDiv.removeChild(loadingMsg);
+    
+            // Adiciona a resposta
+            const botMsg = document.createElement('div');
+            botMsg.classList.add('message', 'bot');
+            botMsg.textContent = data.response || 'Não obtive resposta.';
+            messagesDiv.appendChild(botMsg);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+        } catch (err) {
+            messagesDiv.removeChild(loadingMsg);
+            const errorMsg = document.createElement('div');
+            errorMsg.classList.add('message', 'bot');
+            errorMsg.textContent = '❌ Erro ao conectar com a API.';
+            messagesDiv.appendChild(errorMsg);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    
+        // Libera input e botão
+        questionInput.disabled = false;
+        sendBtn.disabled = false;
+        questionInput.value = '';
+        questionInput.focus();
+    }
+    </script>
+
+</body>
+</html>
